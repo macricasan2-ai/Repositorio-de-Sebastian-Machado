@@ -1,27 +1,33 @@
-def evaluar_robot(adn):
-    posicion = [0, 0]  # Coordenadas iniciales: [Fila, Columna]
-    acido = [4, 4]      # Coordenada del pozo de acido letal
-    piso_acido = False   # Bandera para saber si el robot cayo en el acido
+import random
+import time
+import string
+import os
 
-    # El robot ejecuta su secuencia genetica a ciegas
-    for comando in adn:
-        if comando == 'U': posicion[0] -= 1
-        elif comando == 'D': posicion[0] += 1
-        elif comando == 'L': posicion[1] -= 1
-        elif comando == 'R': posicion[1] += 1
+def limpiar_pantalla():
+    os.system('cls' if os.name == 'nt' else 'clear')
 
-        # Revisamos en CADA paso si el robot piso el acido
-        if posicion == acido:
-            piso_acido = True
+# El entorno (La palabra a evolucionar)
+# REGLA DE ORO: Solo mayusculas y espacios
+objetivo = "SEBASTIAN MACHADO PARRA"
+letras_posibles = string.ascii_uppercase + " "
 
-    cubo = [7, 7]  # Coordenadas de la meta
-    distancia = abs(cubo[0] - posicion[0]) + abs(cubo[1] - posicion[1])
+# El azar inicial (ADN basura)
+individuo = "".join(random.choice(letras_posibles) for _ in range(len(objetivo)))
+generacion = 0
 
-    # El fitness base premia la proximidad a la meta
-    puntaje = 100 - distancia
+# El motor evolutivo
+while individuo != objetivo:
+    nuevo_individuo = ""
+    for i in range(len(objetivo)):
+        # Seleccion natural a nivel de caracter
+        if individuo[i] == objetivo[i]:
+            nuevo_individuo += individuo[i]
+        else:
+            nuevo_individuo += random.choice(letras_posibles)
+    individuo = nuevo_individuo
+    generacion += 1
+    limpiar_pantalla()
+    print(f"Gen {generacion}: {individuo}")
+    time.sleep(0.05)
 
-    # Penalizacion masiva si el robot piso el acido en algun punto del camino
-    if piso_acido:
-        puntaje -= 50
-
-    return puntaje
+print(f"\nEvolucion completada en {generacion} generaciones!")

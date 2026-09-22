@@ -1,0 +1,72 @@
+\documentclass{beamer}
+\usetheme{Madrid}
+\usepackage[utf8]{inputenc}
+\title{Clase 6 — Introducción a Redes Neuronales}
+\author{Curso: Laboratorio IA}
+\date{Clase 6}
+
+\begin{document}
+\frame{\titlepage}
+
+\begin{frame}{Objetivo}
+  Introducir redes neuronales con un ejemplo práctico en PyTorch: predecir la estatura en niños a partir de su edad.
+\end{frame}
+
+\begin{frame}{Agenda}
+  \begin{itemize}
+    \item Motivación y problema
+    \item Dataset sintético (CSV)
+    \item Modelo simple en PyTorch
+    \item Entrenamiento y evaluación
+    \item Demo y conclusiones
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{Motivación}
+  \begin{itemize}
+    \item Las redes neuronales aprenden relaciones no lineales entre variables.
+    \item Empezamos con un problema sencillo: edad $\rightarrow$ estatura.
+    \item Usamos datos sintéticos para ilustrar flujo de trabajo (limpio y reproducible).
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{Dataset sintético}
+  \begin{itemize}
+    \item Archivo: \texttt{data/estatura\_ninos.csv} (columnas: \texttt{age}, \texttt{height}).
+    \item Generado con ruido para simular variabilidad real.
+    \item Usamos $\sim$500 muestras entre 0 y 18 años.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{Modelo propuesto}
+  \begin{itemize}
+    \item Red neuronal pequeña: capas lineales + ReLU.
+    \item Entrada: edad (normalizada), salida: estatura (cm).
+    \item Pérdida: MSE. Optimizador: Adam.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{Entrenamiento}
+  \begin{itemize}
+    \item División entrenamiento / prueba.
+    \item Monitorizar pérdida y error medio absoluto (MAE).
+    \item Guardar modelo y visualizar predicciones vs. reales.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{Código de ejemplo}
+  \begin{itemize}
+    \item Ver \texttt{scripts/train\_estatura.py} para el código PyTorch completo.
+    \item Ver \texttt{data/generate\_height\_data.py} para reproducir el CSV.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{Tareas y próximas sesiones}
+  \begin{itemize}
+    \item Ejecutar el entrenamiento en clase y discutir resultados.
+    \item Extender a múltiples características (peso, sexo, etc.).
+    \item Introducir regularización y validación cruzada.
+  \end{itemize}
+\end{frame}
+
+\end{document}

@@ -1,0 +1,255 @@
+\documentclass[aspectratio=169,11pt]{beamer}
+
+\usepackage[spanish,es-nodecimaldot]{babel}
+\usepackage{fontspec}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta,positioning,shapes.geometric}
+\usepackage{xcolor}
+\usepackage{listings}
+\usepackage{booktabs}
+
+\definecolor{azul}{HTML}{174A7E}
+\definecolor{azulclaro}{HTML}{DCECF8}
+\definecolor{naranja}{HTML}{D95F02}
+\definecolor{verde}{HTML}{2E7D32}
+\definecolor{verdeclaro}{HTML}{E8F5E9}
+\definecolor{rojo}{HTML}{B33A3A}
+\definecolor{fondo}{HTML}{F7F8FA}
+\definecolor{obstaculo}{HTML}{343A40}
+
+\usetheme{Madrid}
+\setbeamercolor{structure}{fg=azul}
+\setbeamercolor{frametitle}{fg=azul}
+\setbeamercolor{normal text}{fg=black!80}
+\setbeamercolor{block title}{bg=azul,fg=white}
+\setbeamercolor{block body}{bg=azulclaro,fg=black!80}
+\setbeamertemplate{navigation symbols}{}
+\setbeamertemplate{footline}{\hfill\insertframenumber\hspace{0.4cm}\vspace{0.2cm}}
+
+\lstdefinestyle{python}{
+  language=Python,
+  basicstyle=\ttfamily\small,
+  backgroundcolor=\color{fondo},
+  frame=single,
+  keepspaces=true,
+  showstringspaces=false,
+  breaklines=true,
+  keywordstyle=\color{azul}\bfseries,
+  stringstyle=\color{naranja}
+}
+
+\title{Laboratorio 7}
+\subtitle{Red neuronal pequena y evolucion por algoritmo genetico}
+\author{Inteligencia Artificial}
+\date{}
+
+\begin{document}
+
+\begin{frame}
+  \titlepage
+\end{frame}
+
+\begin{frame}{La historia del robot}
+  \begin{center}
+  \begin{tikzpicture}[node distance=0.3cm]
+    \node[draw,rounded corners,fill=azulclaro,minimum width=2.55cm,minimum height=1.9cm,align=center] (uno) {\textbf{Clases 1--2}\\Ruta y fitness};
+    \node[draw,rounded corners,fill=orange!15,minimum width=2.55cm,minimum height=1.9cm,align=center,right=of uno] (dos) {\textbf{Clase 3}\\Obstaculos y cruce};
+    \node[draw,rounded corners,fill=verdeclaro,minimum width=2.55cm,minimum height=1.9cm,align=center,right=of dos] (tres) {\textbf{Clase 4}\\Percepcion local};
+    \node[draw,rounded corners,fill=orange!25,minimum width=2.55cm,minimum height=1.9cm,align=center,right=of tres] (cuatro) {\textbf{Clase 7}\\Red neuronal};
+    \draw[->,very thick,azul] (uno) -- (dos);
+    \draw[->,very thick,azul] (dos) -- (tres);
+    \draw[->,very thick,azul] (tres) -- (cuatro);
+  \end{tikzpicture}
+  \end{center}
+  \vspace{0.35cm}
+  \begin{block}{Pregunta de hoy}
+    Podemos conservar la percepcion local y cambiar la forma en que el robot representa su politica?
+  \end{block}
+\end{frame}
+
+\begin{frame}{Que conservamos y que cambia}
+  \begin{columns}[T]
+    \column{0.46\textwidth}
+      \begin{block}{Se conserva}
+        \begin{itemize}
+          \item La cuadricula y los obstaculos.
+          \item Los sensores U, D, L y R.
+          \item El recorrido del robot.
+          \item El fitness y el algoritmo evolutivo.
+        \end{itemize}
+      \end{block}
+    \column{0.46\textwidth}
+      \begin{block}{Cambia}
+        \begin{itemize}
+          \item La tabla de reglas desaparece.
+          \item Cada individuo es una red.
+          \item Los genes son pesos numericos.
+          \item Se usa PyTorch para decidir.
+        \end{itemize}
+      \end{block}
+  \end{columns}
+  \vspace{0.25cm}
+  \begin{alertblock}{Idea central}
+    La evolucion sigue buscando una buena politica; ahora la politica esta parametrizada por una red neuronal.
+  \end{alertblock}
+\end{frame}
+
+\begin{frame}{La observacion local}
+  \begin{columns}[T]
+    \column{0.52\textwidth}
+      \begin{center}
+      \begin{tikzpicture}[x=0.75cm,y=0.75cm]
+        \foreach \x in {0,...,4} {\foreach \y in {0,...,4} {\fill[white] (\x,\y) rectangle ++(1,1);\draw[black!15] (\x,\y) rectangle ++(1,1);}}
+        \fill[obstaculo] (2,1) rectangle ++(1,1);
+        \fill[obstaculo] (1,3) rectangle ++(1,1);
+        \fill[azul!25] (2,2) rectangle ++(1,1);
+        \node at (2.5,2.5) {robot};
+        \draw[->,very thick,rojo] (2.5,2.5) -- (2.5,3.35) node[above] {U};
+        \draw[->,very thick,verde] (2.5,2.5) -- (2.5,1.65) node[below] {D};
+        \draw[->,very thick,naranja] (2.5,2.5) -- (1.65,2.5) node[left] {L};
+        \draw[->,very thick,azul] (2.5,2.5) -- (3.35,2.5) node[right] {R};
+      \end{tikzpicture}
+      \end{center}
+    \column{0.4\textwidth}
+      \begin{itemize}
+        \item 0: celda libre.
+        \item 1: obstaculo o borde.
+        \item Entrada: cuatro bits.
+        \item Salida: cuatro acciones.
+      \end{itemize}
+      \begin{block}{Percepcion parcial}
+        El robot no ve el tablero completo ni recibe una ruta.
+      \end{block}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{La red neuronal pequena}
+  \begin{center}
+  \begin{tikzpicture}[node distance=1.2cm]
+    \node[draw,rounded corners,fill=azulclaro,inner sep=8pt] (entrada) {4 sensores};
+    \node[draw,rounded corners,fill=orange!20,right=of entrada,inner sep=8pt] (oculta) {8 neuronas + ReLU};
+    \node[draw,rounded corners,fill=verdeclaro,right=of oculta,inner sep=8pt] (salida) {4 valores de accion};
+    \draw[->,very thick,azul] (entrada) -- (oculta);
+    \draw[->,very thick,azul] (oculta) -- (salida);
+  \end{tikzpicture}
+  \end{center}
+  \vspace{0.4cm}
+  \begin{block}{Decision}
+    La red calcula un valor para U, D, L y R. El robot ejecuta la accion con mayor valor mediante \texttt{argmax}.
+  \end{block}
+  \begin{alertblock}{Representacion}
+    En la politica tabular evolucionabamos reglas. Aqui evolucionamos todos los pesos de la red.
+  \end{alertblock}
+\end{frame}
+
+\begin{frame}[fragile]{El codigo de la politica}
+\begin{lstlisting}[style=python]
+class RedPercepcion(nn.Module):
+    def __init__(self, hidden_size=8):
+        super().__init__()
+        self.hidden = nn.Linear(4, hidden_size)
+        self.out = nn.Linear(hidden_size, 4)
+
+    def forward(self, x):
+        return self.out(torch.relu(self.hidden(x)))
+\end{lstlisting}
+  \begin{block}{Lectura del codigo}
+    Cuatro entradas representan la percepcion local; la capa oculta combina la informacion y cuatro salidas compiten por controlar el siguiente movimiento.
+  \end{block}
+\end{frame}
+
+\begin{frame}{Como evoluciona una red}
+  \begin{center}
+  \begin{tikzpicture}[node distance=0.65cm]
+    \node[draw,rounded corners,fill=azulclaro,inner sep=7pt] (pob) {40 redes};
+    \node[draw,rounded corners,fill=orange!15,right=of pob,inner sep=7pt] (eval) {evaluar fitness};
+    \node[draw,rounded corners,fill=verdeclaro,right=of eval,inner sep=7pt] (sel) {elitismo y padres};
+    \node[draw,rounded corners,fill=orange!20,right=of sel,inner sep=7pt] (var) {cruce y mutacion};
+    \draw[->,very thick,azul] (pob) -- (eval);
+    \draw[->,very thick,azul] (eval) -- (sel);
+    \draw[->,very thick,azul] (sel) -- (var);
+    \draw[->,very thick,azul] (var) to[bend left=30] (pob);
+  \end{tikzpicture}
+  \end{center}
+  \vspace{0.35cm}
+  \begin{block}{Fitness}
+    \centering
+    $F = 500 - 35d + 4p - 30c - 3r + 2000m$
+  \end{block}
+  \begin{center}
+    Se premia acercarse y llegar; se penalizan choques y repeticiones.
+  \end{center}
+\end{frame}
+
+\begin{frame}{Por que guardar el mejor individuo}
+  \begin{columns}[T]
+    \column{0.45\textwidth}
+      \begin{block}{Durante el entrenamiento}
+        \begin{itemize}
+          \item Se prueban muchas redes.
+          \item Se conserva la mejor.
+          \item La evolucion puede terminar.
+        \end{itemize}
+      \end{block}
+    \column{0.45\textwidth}
+      \begin{block}{Despues del entrenamiento}
+        \begin{itemize}
+          \item Se guardan los pesos en \texttt{mejor\_red.pt}.
+          \item Se carga la misma politica.
+          \item Se prueba en otro mapa.
+        \end{itemize}
+      \end{block}
+  \end{columns}
+  \vspace{0.25cm}
+  \begin{alertblock}{Separar aprender y probar}
+    Esto permite medir si la politica funciona solo en el mapa de entrenamiento o si responde bien a una nueva distribucion de obstaculos.
+  \end{alertblock}
+\end{frame}
+
+\begin{frame}[fragile]{Comandos del laboratorio}
+\begin{lstlisting}[style=python]
+# Entrenar y guardar
+python robot_red_neuronal_evolutiva.py \\
+  --generaciones 40 --guardar-mejor mejor_red.pt
+
+# Cargar sin volver a evolucionar
+python robot_red_neuronal_evolutiva.py \\
+  --cargar-red mejor_red.pt
+\end{lstlisting}
+  \begin{block}{Mapa alternativo}
+    Se modifica manualmente \texttt{OBSTACULOS}, \texttt{INICIO} o \texttt{META} en el archivo y se repite el segundo comando.
+  \end{block}
+\end{frame}
+
+\begin{frame}{Pregunta experimental}
+  \begin{center}
+    \Large Una politica que funciona en un mapa, funcionara en otro?
+  \end{center}
+  \vspace{0.3cm}
+  \begin{enumerate}
+    \item Entrenar con el mapa original.
+    \item Guardar el mejor individuo.
+    \item Cambiar solo los obstaculos.
+    \item Cargar la red y observar la trayectoria.
+    \item Comparar llegada, choques, pasos y ciclos.
+  \end{enumerate}
+  \begin{alertblock}{Hipotesis}
+    Como la red solo ve vecinos, puede reutilizar comportamientos locales, pero no conoce el mapa completo ni la distancia global a la meta.
+  \end{alertblock}
+\end{frame}
+
+\begin{frame}{Cierre: de reglas a representaciones}
+  \begin{itemize}
+    \item La clase anterior introdujo una politica que reacciona a la percepcion.
+    \item Este laboratorio reemplaza la tabla por una red neuronal pequena.
+    \item El algoritmo genetico sigue siendo el mecanismo de aprendizaje.
+    \item Guardar el individuo permite separar entrenamiento y prueba.
+    \item El mapa nuevo introduce una primera pregunta de generalizacion.
+  \end{itemize}
+  \vspace{0.35cm}
+  \begin{block}{Idea final}
+    No cambiamos el problema para ocultar la evolucion: cambiamos la representacion para estudiar que puede aprender una politica parametrica.
+  \end{block}
+\end{frame}
+
+\end{document}
